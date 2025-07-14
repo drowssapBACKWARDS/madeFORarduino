@@ -447,6 +447,27 @@ void handleButtonPress() {
         return;
       }
     }
+    // В экране статистики (звезды)
+    if (inStarScreen) {
+      // Кнопка выхода <
+      if (cursorY == 1 && cursorX == 0) {
+        inStarScreen = false;
+        lastState = pressed;
+        return;
+      }
+      // Кнопка сохранения S
+      if (cursorY == 0 && cursorX == 15) {
+        manualSave();
+        lastState = pressed;
+        return;
+      }
+      // Кнопка сброса R
+      if (cursorY == 1 && cursorX == 15) {
+        manualReset();
+        lastState = pressed;
+        return;
+      }
+    }
     // ... остальной существующий код ...
   }
   lastState = pressed;
@@ -468,7 +489,9 @@ void displayCursor() {
   }
 
   if (inStarScreen) {
-    // ... существующий код для экрана звезды ...
+    lcd.setCursor(cursorX, cursorY);
+    lcd.write((byte)2);
+    return;
   } else {
     // На главном экране — подсвечиваем любую клетку
     lcd.setCursor(cursorX, cursorY);
