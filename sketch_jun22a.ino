@@ -380,6 +380,12 @@ void handleButtonPress() {
     lastButtonPressTime = now;
     // На главном экране
     if (!inShop && !inStarScreen && !inAScreen && !congratsActive) {
+      // --- Обработка нажатия на подарок ---
+      if (giftActive && cursorY == 0 && cursorX == giftPos) {
+        activateGift();
+        lastState = pressed;
+        return;
+      }
       // Нажатие на SHOP
       if (cursorY == 1 && cursorX < 4) {
         inShop = true;
@@ -416,6 +422,26 @@ void handleButtonPress() {
         if (cookies >= cost && cost < 999999) {
           cookies -= cost;
           autoClickLevel++;
+        }
+        lastState = pressed;
+        return;
+      }
+    }
+    // --- ДОБАВЛЕНО: обработка нажатий в магазине улучшения клика ---
+    if (inShop) {
+      // Кнопка возврата
+      if (cursorY == 1 && cursorX == 0) {
+        inShop = false;
+        lastState = pressed;
+        return;
+      }
+      // Кнопка апгрейда
+      if (cursorY == 0 && cursorX == 0) {
+        long cost = calculateUpgradeCost();
+        if (cookies >= cost && cost < 999999) {
+          cookies -= cost;
+          cookiesPerClick = getNextClickPower(cookiesPerClick);
+          totalUpgrades++;
         }
         lastState = pressed;
         return;
