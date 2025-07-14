@@ -291,10 +291,18 @@ void displayStarScreen() {
   }
   // Кнопка S (ручное сохранение) в самой правой клетке первой строки
   lcd.setCursor(15, 0);
-  lcd.print("S");
+  if (cursorX == 15 && cursorY == 0 && inStarScreen) {
+    lcd.write((byte)2);
+  } else {
+    lcd.print("S");
+  }
   // 2 строка: < (выход) и статистика сдвинута вправо
   lcd.setCursor(0, 1);
-  lcd.print(F("<"));
+  if (cursorX == 0 && cursorY == 1 && inStarScreen) {
+    lcd.write((byte)2);
+  } else {
+    lcd.print("<");
+  }
   lcd.setCursor(1, 1);
   lcd.print(F("L:"));
   lcd.print(getLevel(cookiesPerClick));
@@ -304,7 +312,11 @@ void displayStarScreen() {
   lcd.print(totalClicks);
   // Кнопка R (reset) в самой правой клетке второй строки
   lcd.setCursor(15, 1);
-  lcd.print("R");
+  if (cursorX == 15 && cursorY == 1 && inStarScreen) {
+    lcd.write((byte)2);
+  } else {
+    lcd.print("R");
+  }
 }
 
 void displayCongratsScreen() {
@@ -317,6 +329,27 @@ void displayCongratsScreen() {
 
 void handleJoystick() {
   if (inAScreen) {
+    if (digitalRead(JOY_RIGHT)) {
+      if (cursorX < 15) cursorX++;
+      delay(200);
+    }
+    if (digitalRead(JOY_LEFT)) {
+      if (cursorX > 0) cursorX--;
+      delay(200);
+    }
+    if (digitalRead(JOY_UP) == HIGH) {
+      if (cursorY > 0) cursorY--;
+      delay(200);
+    }
+    if (digitalRead(JOY_DOWN) == HIGH) {
+      if (cursorY < 1) cursorY++;
+      delay(200);
+    }
+    return;
+  }
+
+  // Обработка джойстика на экране статистики (звезды)
+  if (inStarScreen) {
     if (digitalRead(JOY_RIGHT)) {
       if (cursorX < 15) cursorX++;
       delay(200);
@@ -354,6 +387,25 @@ void handleJoystick() {
       if (cursorY < 1) cursorY++;
       delay(200);
     }
+  }
+  if (inShop) {
+    if (digitalRead(JOY_RIGHT)) {
+      if (cursorX < 15) cursorX++;
+      delay(200);
+    }
+    if (digitalRead(JOY_LEFT)) {
+      if (cursorX > 0) cursorX--;
+      delay(200);
+    }
+    if (digitalRead(JOY_UP) == HIGH) {
+      if (cursorY > 0) cursorY--;
+      delay(200);
+    }
+    if (digitalRead(JOY_DOWN) == HIGH) {
+      if (cursorY < 1) cursorY++;
+      delay(200);
+    }
+    return;
   }
   // ... существующий код для других экранов ...
 }
