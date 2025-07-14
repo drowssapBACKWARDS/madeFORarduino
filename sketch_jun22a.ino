@@ -419,8 +419,9 @@ void handleButtonPress() {
   // --- Автокрафт при удержании кнопки в зоне J-кнопок ---
   if (!inShop && !inStarScreen && !inAScreen && !congratsActive && pressed && cursorX >= 12) {
     if (now - lastAutoCraftTime > DEBOUNCE_DELAY) {
-      cookies += cookiesPerClick;
-      totalCookies += cookiesPerClick;
+      int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
+      cookies += clickValue;
+      totalCookies += clickValue;
       totalClicks++;
       lastAutoCraftTime = now;
     }
@@ -459,6 +460,13 @@ void handleButtonPress() {
         return;
       }
       // Нажатие на J-кнопки (обрабатывается выше)
+      // --- Клик по любой другой клетке ---
+      int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
+      cookies += clickValue;
+      totalCookies += clickValue;
+      totalClicks++;
+      lastState = pressed;
+      return;
     }
     // В магазине автоклика
     if (inAScreen) {
