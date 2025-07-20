@@ -247,7 +247,7 @@ void displayShopScreen() {
 
   lcd.setCursor(2, 0);
   lcd.write((byte)0); // Значок печенья
-  lcd.print(F("L FOR"));
+  lcd.print(F("L "));
 
   long cost = calculateUpgradeCost();
   char costbuf[8];
