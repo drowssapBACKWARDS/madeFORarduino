@@ -89,6 +89,8 @@ const unsigned long BLINK_INTERVAL = 1000; // 1 секунда
 char messageLine1[17] = "";
 char messageLine2[17] = "";
 GameState screenAfterMessage = MAIN;
+unsigned long messageDisplayStart = 0;
+unsigned long messageTimeout = 0; // 0 = no timeout
 
 // Бонусы престижа
 int prestigeClickLevel = 1;
@@ -195,7 +197,13 @@ void loop() {
   if (currentMagnitude > lastCookieMagnitude && cookies > 10) {
     cookies *= 2;
     lastCookieMagnitude = currentMagnitude;
-    showMessage("YOU ARE COOL", "", MAIN);
+    showMessage("YOU ARE COOL", "", MAIN, 2000);
+  }
+
+  // Таймаут для экрана сообщений
+  if (currentScreen == MESSAGE_SCREEN && messageTimeout > 0 && millis() - messageDisplayStart > messageTimeout) {
+      currentScreen = screenAfterMessage;
+      messageTimeout = 0; // Сбрасываем таймаут
   }
 
   // Появление подарка раз в 2 минуты
@@ -325,13 +333,17 @@ void displayMessageScreen() {
     lcd.print(messageLine2);
 }
 
-void showMessage(const char* line1, const char* line2, GameState nextScreen) {
+void showMessage(const char* line1, const char* line2, GameState nextScreen, unsigned long timeout) {
     strncpy(messageLine1, line1, 16);
     messageLine1[16] = '\0';
     strncpy(messageLine2, line2, 16);
     messageLine2[16] = '\0';
     currentScreen = MESSAGE_SCREEN;
     screenAfterMessage = nextScreen;
+    messageTimeout = timeout;
+    if (timeout > 0) {
+        messageDisplayStart = millis();
+    }
 }
 
 void displayStarScreen() {
@@ -453,7 +465,7 @@ void handleButtonPress() {
                 cursorX = 0; // ставим курсор на NO
                 cursorY = 1;
             } else {
-                showMessage("YOU HAVEN'T", "ENOUGH COOKIES", MAIN);
+                showMessage("YOU HAVEN'T", "ENOUGH COOKIES", MAIN, 5000);
             }
         }
         // Нажатие на звездочку
@@ -482,7 +494,7 @@ void handleButtonPress() {
           if (cookies >= cost) {
             cookies -= cost;
             autoClickLevel++;
-            showMessage("BOUGHT", "", AUTOCLICK_SHOP);
+            showMessage("BOUGHT", "", AUTOCLICK_SHOP, 2000);
           }
         }
         break;
@@ -499,7 +511,7 @@ void handleButtonPress() {
             cookies -= cost;
             cookiesPerClick = getNextClickPower(cookiesPerClick);
             totalUpgrades++;
-            showMessage("BOUGHT", "", SHOP);
+            showMessage("BOUGHT", "", SHOP, 2000);
           }
         }
         break;
@@ -533,6 +545,7 @@ void handleButtonPress() {
       case MESSAGE_SCREEN:
         // любое нажатие вернет на предыдущий экран
         currentScreen = screenAfterMessage;
+        messageTimeout = 0; // Сбрасываем таймаут при ручном пропуске
         break;
     }
     
@@ -657,8 +670,8 @@ void activateGift() {
     case 3: cookies += 5000; totalCookies += 5000; break;
     case 4: cookies += 10000; totalCookies += 10000; break;
     case 5: cookies += 15000; totalCookies += 15000; break;
-    case 6: cookiesPerClick += 50; showMessage("BOUGHT", "+50 to click", MAIN); break;
-    case 7: cookiesPerClick += 2; totalUpgrades++; showMessage("BOUGHT", "+1 level", MAIN); break;
+    case 6: cookiesPerClick += 50; showMessage("BOUGHT", "+50 to click", MAIN, 2000); break;
+    case 7: cookiesPerClick += 2; totalUpgrades++; showMessage("BOUGHT", "+1 level", MAIN, 2000); break;
     case 8: bonus573Active = true; bonus573Start = millis(); break;
   }
   tryAutoSave();
