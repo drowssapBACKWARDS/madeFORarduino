@@ -159,6 +159,7 @@ void setup() {
   EEPROM.get(12, totalClicks);
   EEPROM.get(16, totalUpgrades);
   EEPROM.get(20, autoClickLevel); // добавлено
+  if (autoClickLevel < 0) autoClickLevel = 0; // защита
   lastSavedCookies = cookies;
 
   randomSeed(analogRead(0));
@@ -436,13 +437,15 @@ void handleButtonPress() {
       if (cursorY == 1 && cursorX == 4) {
         inAScreen = true;
         cursorX = 0; // Сбрасываем позицию курсора на кнопку выхода
-        cursorY = 0;
+        cursorY = 1; // Теперь всегда на кнопке выхода
         lastState = pressed;
         return;
       }
       // Нажатие на звездочку
       if (cursorY == 0 && cursorX == getDigitCount(cookies)) {
         inStarScreen = true;
+        cursorX = 0; // Кнопка выхода
+        cursorY = 1;
         lastState = pressed;
         return;
       }
@@ -656,11 +659,12 @@ void displayAScreen() {
   lcd.setCursor(0, 0);
   lcd.write((byte)1); // стрелка вверх
   // Цена улучшения
+  int safeLevel = autoClickLevel < 0 ? 0 : autoClickLevel;
   long long cost = calculateAutoClickUpgradeCost();
   printBigNumber(cost, 1, 0);
   
   // Доход в секунду (после покупки, последние 3 клетки)
-  int income = getAutoClickPower(autoClickLevel + 1);
+  int income = getAutoClickPower(safeLevel + 1);
   char incbuf[4];
   snprintf(incbuf, sizeof(incbuf), "%3d", income);
   lcd.setCursor(13, 0);
@@ -668,21 +672,21 @@ void displayAScreen() {
   // Вторая строка: кнопка выхода, Your Level и уровень автоклика
   lcd.setCursor(0, 1);
   lcd.print("<");
-  lcd.setCursor(1, 1);
+  lcd.setCursor(2, 1);
   lcd.print(F("Your Level"));
   char lvlbuf[4];
-  snprintf(lvlbuf, sizeof(lvlbuf), "%3d", autoClickLevel);
+  snprintf(lvlbuf, sizeof(lvlbuf), "%3d", safeLevel);
   lcd.setCursor(13, 1);
   lcd.print(lvlbuf);
 }
 
 long long calculateAutoClickUpgradeCost() {
+  int safeLevel = autoClickLevel < 0 ? 0 : autoClickLevel;
   // Для первой покупки - фиксированная цена
-  if (autoClickLevel == 0) return 1000;
-  
-  int power = getAutoClickPower(autoClickLevel + 1); // считаем для следующего уровня
+  if (safeLevel == 0) return 1000;
+  int power = getAutoClickPower(safeLevel + 1); // считаем для следующего уровня
   long long cost = (long long)power * power * 100L;
-  if (autoClickLevel + 1 > 15) cost *= (power / 2);
+  if (safeLevel + 1 > 15) cost *= (power / 2);
   return cost;
 }
 
