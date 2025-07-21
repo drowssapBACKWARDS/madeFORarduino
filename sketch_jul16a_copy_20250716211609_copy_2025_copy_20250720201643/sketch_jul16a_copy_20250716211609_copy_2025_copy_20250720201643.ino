@@ -158,6 +158,7 @@ void setup() {
   EEPROM.get(8, totalCookies);
   EEPROM.get(12, totalClicks);
   EEPROM.get(16, totalUpgrades);
+  EEPROM.get(20, autoClickLevel); // добавлено
   lastSavedCookies = cookies;
 
   randomSeed(analogRead(0));
@@ -606,6 +607,7 @@ void tryAutoSave() {
     EEPROM.put(8, totalCookies);
     EEPROM.put(12, totalClicks);
     EEPROM.put(16, totalUpgrades);
+    EEPROM.put(20, autoClickLevel); // добавлено
     lastSavedCookies = cookies;
   }
 }
@@ -616,6 +618,7 @@ void manualSave() {
   EEPROM.put(8, totalCookies);
   EEPROM.put(12, totalClicks);
   EEPROM.put(16, totalUpgrades);
+  EEPROM.put(20, autoClickLevel); // добавлено
   lastSavedCookies = cookies;
 }
 
@@ -625,6 +628,7 @@ void manualReset() {
   totalCookies = 0;
   totalClicks = 0;
   totalUpgrades = 0;
+  autoClickLevel = 0; // добавлено
   manualSave();
 }
 
@@ -676,6 +680,7 @@ long long calculateAutoClickUpgradeCost() {
   // Для первой покупки - фиксированная цена
   if (autoClickLevel == 0) return 1000;
   
+  // Используем уровень автокликера, а не ручного клика
   int power = getAutoClickPower(autoClickLevel);
   long long cost = (long long)power * power * 100L;
   if (autoClickLevel > 15) cost *= (power / 2);
