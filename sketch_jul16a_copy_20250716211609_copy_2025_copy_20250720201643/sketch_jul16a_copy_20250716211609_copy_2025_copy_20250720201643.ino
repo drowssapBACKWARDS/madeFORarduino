@@ -680,10 +680,9 @@ long long calculateAutoClickUpgradeCost() {
   // Для первой покупки - фиксированная цена
   if (autoClickLevel == 0) return 1000;
   
-  // Используем уровень автокликера, а не ручного клика
-  int power = getAutoClickPower(autoClickLevel);
+  int power = getAutoClickPower(autoClickLevel + 1); // считаем для следующего уровня
   long long cost = (long long)power * power * 100L;
-  if (autoClickLevel > 15) cost *= (power / 2);
+  if (autoClickLevel + 1 > 15) cost *= (power / 2);
   return cost;
 }
 
