@@ -256,10 +256,12 @@ void displayShopScreen() {
 
   // Будущая сила клика справа в первой строке
   printRightAligned4(getNextClickPower(cookiesPerClick), 0);
-  // Вторая строка: только кнопка возврата
+  
+  // Вторая строка: кнопка возврата, надпись и уровень
   lcd.setCursor(0, 1);
   lcd.print(F("<"));
-  // Уровень справа во второй строке
+  lcd.setCursor(2, 1);
+  lcd.print(F("Your Level"));
   printRightAligned4(getLevel(cookiesPerClick), 1);
 }
 
@@ -693,11 +695,11 @@ void printBigNumber(long long number, int x, int y) {
   if (number < 1000) {
     snprintf(buf, sizeof(buf), "%lld", number);
   } else if (number < 1000000) {
-    snprintf(buf, sizeof(buf), "%dK", (int)(number / 1000));
+    snprintf(buf, sizeof(buf), "%lldK", number / 1000);
   } else if (number < 1000000000) {
-    snprintf(buf, sizeof(buf), "%dM", (int)(number / 1000000));
+    snprintf(buf, sizeof(buf), "%lldM", number / 1000000);
   } else {
-    snprintf(buf, sizeof(buf), "%dG", (int)(number / 1000000000));
+    snprintf(buf, sizeof(buf), "%lldB", number / 1000000000);
   }
   lcd.setCursor(x, y);
   lcd.print(buf);
