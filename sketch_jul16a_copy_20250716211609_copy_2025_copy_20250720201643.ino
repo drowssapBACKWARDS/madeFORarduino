@@ -246,34 +246,27 @@ void displayShopScreen() {
   lcd.write((byte)1); // Кнопка улучшения - стрелка вверх
 
   lcd.setCursor(2, 0);
-  lcd.write((byte)0); // Значок печенья
-  lcd.print(F("L "));
-
+  // Убраны значок печенья и символ 'L'
+  // Просто оставляем цену
   long cost = calculateUpgradeCost();
   char costbuf[8];
-  int rightMargin = 13; // 3 cells from right edge (16 - 3 = 13)
-  int costStart = 7; // Position after "L FOR"
+  int rightMargin = 13;
+  int costStart = 2; // Сразу после стрелки
   int costSpace = rightMargin - costStart;
-  
   if (cost > 999999) {
     snprintf(costbuf, sizeof(costbuf), "MAX");
   } else {
     snprintf(costbuf, sizeof(costbuf), "%ld", cost);
   }
-  
-  // Center the cost in available space
   int costLen = strlen(costbuf);
   int padding = (costSpace - costLen) / 2;
   lcd.setCursor(costStart + padding, 0);
   lcd.print(costbuf);
-
   // Будущая сила клика справа в первой строке
   printRightAligned4(getNextClickPower(cookiesPerClick), 0);
-
-  // Вторая строка: кнопка возврата и надпись Your Level
+  // Вторая строка: только кнопка возврата
   lcd.setCursor(0, 1);
-  lcd.print(F("<Your Level"));
-
+  lcd.print(F("<"));
   // Уровень справа во второй строке
   printRightAligned4(getLevel(cookiesPerClick), 1);
 }
