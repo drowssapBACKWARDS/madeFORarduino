@@ -248,20 +248,12 @@ void displayShopScreen() {
   lcd.setCursor(2, 0);
   // Убраны значок печенья и символ 'L'
   // Просто оставляем цену
-  long cost = calculateUpgradeCost();
-  char costbuf[8];
+  long long cost = calculateUpgradeCost();
   int rightMargin = 13;
   int costStart = 2; // Сразу после стрелки
-  int costSpace = rightMargin - costStart;
-  if (cost > 999999) {
-    snprintf(costbuf, sizeof(costbuf), "MAX");
-  } else {
-    snprintf(costbuf, sizeof(costbuf), "%ld", cost);
-  }
-  int costLen = strlen(costbuf);
-  int padding = (costSpace - costLen) / 2;
-  lcd.setCursor(costStart + padding, 0);
-  lcd.print(costbuf);
+  
+  printBigNumber(cost, costStart, 0);
+
   // Будущая сила клика справа в первой строке
   printRightAligned4(getNextClickPower(cookiesPerClick), 0);
   // Вторая строка: только кнопка возврата
@@ -471,8 +463,8 @@ void handleButtonPress() {
       }
       // Кнопка апгрейда теперь на (0,0)
       if (cursorY == 0 && cursorX == 0) {
-        long cost = calculateAutoClickUpgradeCost();
-        if (cookies >= cost && cost < 999999) {
+        long long cost = calculateAutoClickUpgradeCost();
+        if (cookies >= cost) {
           cookies -= cost;
           autoClickLevel++;
         }
@@ -490,8 +482,8 @@ void handleButtonPress() {
       }
       // Кнопка апгрейда
       if (cursorY == 0 && cursorX == 0) {
-        long cost = calculateUpgradeCost();
-        if (cookies >= cost && cost < 999999) {
+        long long cost = calculateUpgradeCost();
+        if (cookies >= cost) {
           cookies -= cost;
           cookiesPerClick = getNextClickPower(cookiesPerClick);
           totalUpgrades++;
@@ -552,15 +544,28 @@ void displayCursor() {
   }
 }
 
-long calculateUpgradeCost() {
-  if (cookiesPerClick < 15) {
-    return (long)cookiesPerClick * cookiesPerClick * 100;
-  } else {
-    return (long)cookiesPerClick * cookiesPerClick * 100 * (cookiesPerClick / 2);
+long long calculateUpgradeCost() {
+  int level = getLevel(cookiesPerClick);
+  
+  // Новый алгоритм: экспоненциальный рост.
+  // Базовая стоимость 100, каждый уровень на 15% дороже.
+  long long cost = 100;
+  int growth_factor_scaled = 115; // 1.15 * 100
+
+  for (int i = 1; i < level; i++) {
+    // Умножаем на 1.15, используя целочисленную арифметику
+    cost = (cost * growth_factor_scaled) / 100;
   }
+
+  // Небольшая добавка, чтобы цена росла даже на первых уровнях
+  if (level > 1) {
+      cost += level * 10;
+  }
+
+  return cost;
 }
 
-int getDigitCount(int number) {
+int getDigitCount(long number) {
     if (number < 10) return 1;
     if (number < 100) return 2;
     if (number < 1000) return 3;
@@ -646,15 +651,9 @@ void displayAScreen() {
   lcd.setCursor(0, 0);
   lcd.write((byte)1); // стрелка вверх
   // Цена улучшения
-  long cost = calculateAutoClickUpgradeCost();
-  char costbuf[8];
-  if (cost > 999999) {
-    snprintf(costbuf, sizeof(costbuf), "MAX");
-  } else {
-    snprintf(costbuf, sizeof(costbuf), "%ld", cost);
-  }
-  lcd.setCursor(1, 0);
-  lcd.print(costbuf);
+  long long cost = calculateAutoClickUpgradeCost();
+  printBigNumber(cost, 1, 0);
+  
   // Доход в секунду (после покупки, последние 3 клетки)
   int income = getAutoClickPower(autoClickLevel + 1);
   char incbuf[4];
@@ -672,12 +671,12 @@ void displayAScreen() {
   lcd.print(lvlbuf);
 }
 
-long calculateAutoClickUpgradeCost() {
+long long calculateAutoClickUpgradeCost() {
   // Для первой покупки - фиксированная цена
   if (autoClickLevel == 0) return 1000;
   
   int power = getAutoClickPower(autoClickLevel);
-  long cost = (power * power * 100L);
+  long long cost = (long long)power * power * 100L;
   if (autoClickLevel > 15) cost *= (power / 2);
   return cost;
 }
@@ -687,4 +686,19 @@ int getAutoClickPower(int level) {
   if (level == 1) return 1;
   if (level <= 15) return 1 + (level - 1) * 2;
   return 1 + (14 * 2) + (level - 15) * 4;
+} 
+
+void printBigNumber(long long number, int x, int y) {
+  char buf[8];
+  if (number < 1000) {
+    snprintf(buf, sizeof(buf), "%lld", number);
+  } else if (number < 1000000) {
+    snprintf(buf, sizeof(buf), "%dK", (int)(number / 1000));
+  } else if (number < 1000000000) {
+    snprintf(buf, sizeof(buf), "%dM", (int)(number / 1000000));
+  } else {
+    snprintf(buf, sizeof(buf), "%dG", (int)(number / 1000000000));
+  }
+  lcd.setCursor(x, y);
+  lcd.print(buf);
 } 
