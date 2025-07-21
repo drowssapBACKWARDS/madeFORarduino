@@ -245,14 +245,13 @@ void displayShopScreen() {
   lcd.setCursor(0, 0);
   lcd.write((byte)1); // Кнопка улучшения - стрелка вверх
 
-  lcd.setCursor(2, 0);
-  // Убраны значок печенья и символ 'L'
-  // Просто оставляем цену
+  // Очищаем область для цены
+  lcd.setCursor(1, 0);
+  lcd.print("           "); // 11 пробелов, с 1 по 11 позицию
+
+  // Отображаем цену
   long long cost = calculateUpgradeCost();
-  int rightMargin = 13;
-  int costStart = 2; // Сразу после стрелки
-  
-  printBigNumber(cost, costStart, 0);
+  printBigNumber(cost, 1, 0);
 
   // Будущая сила клика справа в первой строке
   printRightAligned4(getNextClickPower(cookiesPerClick), 0);
@@ -691,16 +690,40 @@ int getAutoClickPower(int level) {
 } 
 
 void printBigNumber(long long number, int x, int y) {
-  char buf[8];
+  char buf[22];
+  long long value_to_print;
+  char suffix = '\0';
+
   if (number < 1000) {
-    snprintf(buf, sizeof(buf), "%lld", number);
+    value_to_print = number;
   } else if (number < 1000000) {
-    snprintf(buf, sizeof(buf), "%lldK", number / 1000);
+    value_to_print = number / 1000;
+    suffix = 'K';
   } else if (number < 1000000000) {
-    snprintf(buf, sizeof(buf), "%lldM", number / 1000000);
+    value_to_print = number / 1000000;
+    suffix = 'M';
   } else {
-    snprintf(buf, sizeof(buf), "%lldB", number / 1000000000);
+    value_to_print = number / 1000000000;
+    suffix = 'B';
   }
+
+  // Convert value_to_print to string (manual lltoa)
+  int i = sizeof(buf) - 1;
+  buf[i--] = '\0';
+
+  if (suffix != '\0') {
+    buf[i--] = suffix;
+  }
+
+  if (value_to_print == 0) {
+    buf[i--] = '0';
+  } else {
+    while (value_to_print > 0) {
+      buf[i--] = (value_to_print % 10) + '0';
+      value_to_print /= 10;
+    }
+  }
+  
   lcd.setCursor(x, y);
-  lcd.print(buf);
+  lcd.print(&buf[i + 1]);
 } 
