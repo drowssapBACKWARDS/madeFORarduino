@@ -66,9 +66,13 @@ int cursorX = 15;
 int cursorY = 1;
 
 // Переменные экранов
-bool inShop = false;
-bool inStarScreen = false;
-bool inAScreen = false;
+enum GameState {
+  MAIN,
+  SHOP,
+  STATS,
+  AUTOCLICK_SHOP
+};
+GameState currentScreen = MAIN;
 
 // Переменные для обработки нажатий без задержек
 unsigned long lastButtonPressTime = 0;
@@ -167,7 +171,7 @@ void setup() {
 
 void loop() {
   // Появление подарка раз в 2 минуты
-  if (!giftActive && !congratsActive && !inShop && !inStarScreen && !inAScreen && millis() - lastGiftTime > GIFT_INTERVAL) {
+  if (!giftActive && !congratsActive && currentScreen == MAIN && millis() - lastGiftTime > GIFT_INTERVAL) {
     giftActive = true;
     giftType = random(GIFT_COUNT);
     giftPos = GIFT_POSITIONS[random(4)];
@@ -182,7 +186,7 @@ void loop() {
     congratsActive = false;
   }
   // Автокликер работает только если куплен (уровень > 0)
-  if (!inShop && !inStarScreen && !inAScreen && autoClickLevel > 0 && millis() - lastAutoClickTime > AUTOCLICK_INTERVAL) {
+  if (currentScreen == MAIN && autoClickLevel > 0 && millis() - lastAutoClickTime > AUTOCLICK_INTERVAL) {
     cookies += getAutoClickPower(autoClickLevel);
     lastAutoClickTime = millis();
   }
@@ -201,14 +205,21 @@ void displayManager() {
   lcd.clear();
   if (congratsActive) {
     displayCongratsScreen();
-  } else if (inStarScreen) {
-    displayStarScreen();
-  } else if (inShop) {
-    displayShopScreen();
-  } else if (inAScreen) {
-    displayAScreen();
   } else {
-    displayMainScreen();
+    switch (currentScreen) {
+      case MAIN:
+        displayMainScreen();
+        break;
+      case SHOP:
+        displayShopScreen();
+        break;
+      case STATS:
+        displayStarScreen();
+        break;
+      case AUTOCLICK_SHOP:
+        displayAScreen();
+        break;
+    }
   }
   displayCursor();
 }
@@ -279,14 +290,14 @@ void displayStarScreen() {
   }
   // Кнопка S (ручное сохранение) в самой правой клетке первой строки
   lcd.setCursor(15, 0);
-  if (cursorX == 15 && cursorY == 0 && inStarScreen) {
+  if (cursorX == 15 && cursorY == 0 && currentScreen == STATS) {
     lcd.write((byte)2);
   } else {
     lcd.print("S");
   }
   // 2 строка: < (выход) и статистика сдвинута вправо
   lcd.setCursor(0, 1);
-  if (cursorX == 0 && cursorY == 1 && inStarScreen) {
+  if (cursorX == 0 && cursorY == 1 && currentScreen == STATS) {
     lcd.write((byte)2);
   } else {
     lcd.print("<");
@@ -300,7 +311,7 @@ void displayStarScreen() {
   lcd.print(totalClicks);
   // Кнопка R (reset) в самой правой клетке второй строки
   lcd.setCursor(15, 1);
-  if (cursorX == 15 && cursorY == 1 && inStarScreen) {
+  if (cursorX == 15 && cursorY == 1 && currentScreen == STATS) {
     lcd.write((byte)2);
   } else {
     lcd.print("R");
@@ -316,86 +327,23 @@ void displayCongratsScreen() {
 }
 
 void handleJoystick() {
-  if (inAScreen) {
-    if (digitalRead(JOY_RIGHT)) {
-      if (cursorX < 15) cursorX++;
-      delay(200);
-    }
-    if (digitalRead(JOY_LEFT)) {
-      if (cursorX > 0) cursorX--;
-      delay(200);
-    }
-    if (digitalRead(JOY_UP) == HIGH) {
-      if (cursorY > 0) cursorY--;
-      delay(200);
-    }
-    if (digitalRead(JOY_DOWN) == HIGH) {
-      if (cursorY < 1) cursorY++;
-      delay(200);
-    }
-    return;
+  // Универсальная обработка джойстика для всех экранов
+  if (digitalRead(JOY_RIGHT)) {
+    if (cursorX < 15) cursorX++;
+    delay(200);
   }
-
-  // Обработка джойстика на экране статистики (звезды)
-  if (inStarScreen) {
-    if (digitalRead(JOY_RIGHT)) {
-      if (cursorX < 15) cursorX++;
-      delay(200);
-    }
-    if (digitalRead(JOY_LEFT)) {
-      if (cursorX > 0) cursorX--;
-      delay(200);
-    }
-    if (digitalRead(JOY_UP) == HIGH) {
-      if (cursorY > 0) cursorY--;
-      delay(200);
-    }
-    if (digitalRead(JOY_DOWN) == HIGH) {
-      if (cursorY < 1) cursorY++;
-      delay(200);
-    }
-    return;
+  if (digitalRead(JOY_LEFT)) {
+    if (cursorX > 0) cursorX--;
+    delay(200);
   }
-
-  // Обработка джойстика на главном экране
-  if (!inShop && !inStarScreen && !inAScreen) {
-    if (digitalRead(JOY_RIGHT)) {
-      if (cursorX < 15) cursorX++;
-      delay(200);
-    }
-    if (digitalRead(JOY_LEFT)) {
-      if (cursorX > 0) cursorX--;
-      delay(200);
-    }
-    if (digitalRead(JOY_UP) == HIGH) {
-      if (cursorY > 0) cursorY--;
-      delay(200);
-    }
-    if (digitalRead(JOY_DOWN) == HIGH) {
-      if (cursorY < 1) cursorY++;
-      delay(200);
-    }
+  if (digitalRead(JOY_UP) == HIGH) {
+    if (cursorY > 0) cursorY--;
+    delay(200);
   }
-  if (inShop) {
-    if (digitalRead(JOY_RIGHT)) {
-      if (cursorX < 15) cursorX++;
-      delay(200);
-    }
-    if (digitalRead(JOY_LEFT)) {
-      if (cursorX > 0) cursorX--;
-      delay(200);
-    }
-    if (digitalRead(JOY_UP) == HIGH) {
-      if (cursorY > 0) cursorY--;
-      delay(200);
-    }
-    if (digitalRead(JOY_DOWN) == HIGH) {
-      if (cursorY < 1) cursorY++;
-      delay(200);
-    }
-    return;
+  if (digitalRead(JOY_DOWN) == HIGH) {
+    if (cursorY < 1) cursorY++;
+    delay(200);
   }
-  // ... существующий код для других экранов ...
 }
 
 void handleButtonPress() {
@@ -405,7 +353,7 @@ void handleButtonPress() {
   unsigned long now = millis();
 
   // --- Автокрафт при удержании кнопки в зоне J-кнопок ---
-  if (!inShop && !inStarScreen && !inAScreen && !congratsActive && pressed && cursorX >= 12) {
+  if (currentScreen == MAIN && !congratsActive && pressed && cursorX >= 12) {
     if (now - lastAutoCraftTime > DEBOUNCE_DELAY) {
       int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
       cookies += clickValue;
@@ -419,134 +367,99 @@ void handleButtonPress() {
 
   if (pressed && !lastState && now - lastButtonPressTime > DEBOUNCE_DELAY) {
     lastButtonPressTime = now;
-    // На главном экране
-    if (!inShop && !inStarScreen && !inAScreen && !congratsActive) {
-      // --- Обработка нажатия на подарок ---
-      if (giftActive && cursorY == 0 && cursorX == giftPos) {
-        activateGift();
+    
+    if (congratsActive) {
         lastState = pressed;
         return;
-      }
-      // Нажатие на SHOP
-      if (cursorY == 1 && cursorX < 4) {
-        inShop = true;
-        lastState = pressed;
-        return;
-      }
-      // Нажатие на символ 'a'
-      if (cursorY == 1 && cursorX == 4) {
-        inAScreen = true;
-        cursorX = 0; // Сбрасываем позицию курсора на кнопку выхода
-        cursorY = 1; // Теперь всегда на кнопке выхода
-        lastState = pressed;
-        return;
-      }
-      // Нажатие на звездочку
-      if (cursorY == 0 && cursorX == getDigitCount(cookies)) {
-        inStarScreen = true;
-        cursorX = 0; // Кнопка выхода
-        cursorY = 1;
-        lastState = pressed;
-        return;
-      }
-      // Нажатие на J-кнопки (обрабатывается выше)
-      // --- Клик по любой другой клетке ---
-      int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
-      cookies += clickValue;
-      totalCookies += clickValue;
-      totalClicks++;
-      lastState = pressed;
-      return;
     }
-    // В магазине автоклика
-    if (inAScreen) {
-      // Кнопка выхода теперь на второй строке
-      if (cursorY == 1 && cursorX == 0) {
-        inAScreen = false;
-        lastState = pressed;
-        return;
-      }
-      // Кнопка апгрейда теперь на (0,0)
-      if (cursorY == 0 && cursorX == 0) {
-        long long cost = calculateAutoClickUpgradeCost();
-        if (cookies >= cost) {
-          cookies -= cost;
-          autoClickLevel++;
+
+    switch (currentScreen) {
+      case MAIN:
+        // --- Обработка нажатия на подарок ---
+        if (giftActive && cursorY == 0 && cursorX == giftPos) {
+          activateGift();
         }
-        lastState = pressed;
-        return;
-      }
-    }
-    // --- ДОБАВЛЕНО: обработка нажатий в магазине улучшения клика ---
-    if (inShop) {
-      // Кнопка возврата
-      if (cursorY == 1 && cursorX == 0) {
-        inShop = false;
-        lastState = pressed;
-        return;
-      }
-      // Кнопка апгрейда
-      if (cursorY == 0 && cursorX == 0) {
-        long long cost = calculateUpgradeCost();
-        if (cookies >= cost) {
-          cookies -= cost;
-          cookiesPerClick = getNextClickPower(cookiesPerClick);
-          totalUpgrades++;
+        // Нажатие на SHOP
+        else if (cursorY == 1 && cursorX < 4) {
+          currentScreen = SHOP;
         }
-        lastState = pressed;
-        return;
-      }
+        // Нажатие на символ 'a'
+        else if (cursorY == 1 && cursorX == 4) {
+          currentScreen = AUTOCLICK_SHOP;
+          cursorX = 0; // Сбрасываем позицию курсора на кнопку выхода
+          cursorY = 1; // Теперь всегда на кнопке выхода
+        }
+        // Нажатие на звездочку
+        else if (cursorY == 0 && cursorX == getDigitCount(cookies)) {
+          currentScreen = STATS;
+          cursorX = 0; // Кнопка выхода
+          cursorY = 1;
+        }
+        // --- Клик по любой другой клетке ---
+        else {
+          int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
+          cookies += clickValue;
+          totalCookies += clickValue;
+          totalClicks++;
+        }
+        break;
+
+      case AUTOCLICK_SHOP:
+        // Кнопка выхода теперь на второй строке
+        if (cursorY == 1 && cursorX == 0) {
+          currentScreen = MAIN;
+        }
+        // Кнопка апгрейда теперь на (0,0)
+        else if (cursorY == 0 && cursorX == 0) {
+          long long cost = calculateAutoClickUpgradeCost();
+          if (cookies >= cost) {
+            cookies -= cost;
+            autoClickLevel++;
+          }
+        }
+        break;
+
+      case SHOP:
+        // Кнопка возврата
+        if (cursorY == 1 && cursorX == 0) {
+          currentScreen = MAIN;
+        }
+        // Кнопка апгрейда
+        else if (cursorY == 0 && cursorX == 0) {
+          long long cost = calculateUpgradeCost();
+          if (cookies >= cost) {
+            cookies -= cost;
+            cookiesPerClick = getNextClickPower(cookiesPerClick);
+            totalUpgrades++;
+          }
+        }
+        break;
+
+      case STATS:
+        // Кнопка выхода <
+        if (cursorY == 1 && cursorX == 0) {
+          currentScreen = MAIN;
+        }
+        // Кнопка сохранения S
+        else if (cursorY == 0 && cursorX == 15) {
+          manualSave();
+        }
+        // Кнопка сброса R
+        else if (cursorY == 1 && cursorX == 15) {
+          manualReset();
+        }
+        break;
     }
-    // В экране статистики (звезды)
-    if (inStarScreen) {
-      // Кнопка выхода <
-      if (cursorY == 1 && cursorX == 0) {
-        inStarScreen = false;
-        lastState = pressed;
-        return;
-      }
-      // Кнопка сохранения S
-      if (cursorY == 0 && cursorX == 15) {
-        manualSave();
-        lastState = pressed;
-        return;
-      }
-      // Кнопка сброса R
-      if (cursorY == 1 && cursorX == 15) {
-        manualReset();
-        lastState = pressed;
-        return;
-      }
-    }
-    // ... остальной существующий код ...
+    
+    lastState = pressed;
   }
-  lastState = pressed;
 }
 
 void displayCursor() {
   if (!cursorVisible) return;
-
-  if (inAScreen) {
-    lcd.setCursor(cursorX, cursorY);
-    lcd.write((byte)2);
-    return;
-  }
-
-  if (inShop) {
-    lcd.setCursor(cursorX, cursorY);
-    lcd.write((byte)2);
-    return;
-  }
-
-  if (inStarScreen) {
-    lcd.setCursor(cursorX, cursorY);
-    lcd.write((byte)2);
-    return;
-  } else {
-    // На главном экране — подсвечиваем любую клетку
-    lcd.setCursor(cursorX, cursorY);
-    lcd.write((byte)2);
-  }
+  // Логика теперь универсальна для всех экранов
+  lcd.setCursor(cursorX, cursorY);
+  lcd.write((byte)2);
 }
 
 long long calculateUpgradeCost() {
