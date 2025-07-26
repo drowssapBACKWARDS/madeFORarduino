@@ -65,6 +65,8 @@ int cookiesPerClick = 1;
 // Cursor Variables
 int cursorX = 15;
 int cursorY = 1;
+int prevCursorX = 15;
+int prevCursorY = 1;
 
 // Screen State Management
 enum GameState {
@@ -80,14 +82,14 @@ GameState lastScreen = MAIN;
 
 // Non-blocking Timers
 unsigned long lastButtonPressTime = 0;
-const unsigned long DEBOUNCE_DELAY = 200;
+const unsigned long DEBOUNCE_DELAY = 400;
 unsigned long lastJoystickMoveTime = 0;
-const unsigned long JOYSTICK_DELAY = 150;
+const unsigned long JOYSTICK_DELAY = 200;
 
 // Cursor Blinking
 unsigned long lastBlinkTime = 0;
 bool cursorVisible = true;
-const unsigned long BLINK_INTERVAL = 1000;
+const unsigned long BLINK_INTERVAL = 950;
 
 // Message Screen Variables
 char messageLine1[17] = "";
@@ -187,7 +189,7 @@ const unsigned long AUTOCLICK_INTERVAL = 1000; // 1 second
 
 bool needRedraw = true;
 
-// === Оптимизация: константы и структура состояния экрана ===
+// === Optimization: constants and screen state structure ===
 constexpr int LCD_WIDTH = 16;
 constexpr int LCD_HEIGHT = 2;
 constexpr int MAX_DIGITS = 7;
@@ -210,6 +212,24 @@ struct ScreenState {
   long totalClicks;
 };
 ScreenState prevState = {-1, -1, false, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1, -1};
+
+// --- LCD HELPER FUNCTIONS ---
+inline void lcdPrintAt(int x, int y, const char* str) {
+  lcd.setCursor(x, y);
+  lcd.print(str);
+}
+inline void lcdPrintAt(int x, int y, const __FlashStringHelper* str) {
+  lcd.setCursor(x, y);
+  lcd.print(str);
+}
+inline void lcdPrintAt(int x, int y, long value) {
+  lcd.setCursor(x, y);
+  lcd.print(value);
+}
+inline void lcdWriteAt(int x, int y, uint8_t ch) {
+  lcd.setCursor(x, y);
+  lcd.write(ch);
+}
 
 void setup() {
   // Init LCD
@@ -347,30 +367,33 @@ void displayManager() {
 
 void displayMainScreen() {
   if (cookies != prevState.cookies) {
-    int cookieDigits = getDigitCount(cookies);
+    // Draw cookies and stats button together
+    char buf[12];
+    snprintf(buf, sizeof(buf), "%ld", cookies);
+    int cookieDigits = strlen(buf);
     if (cookieDigits > MAX_DIGITS) cookieDigits = MAX_DIGITS;
     int cookiePos = 0;
+    // Clear the whole area first
+    lcdPrintAt(cookiePos, 0, "                ");
+    // Print cookies
     lcd.setCursor(cookiePos, 0);
-    lcd.print("        "); // Clear area
-    lcd.setCursor(cookiePos, 0);
-    lcd.print(cookies);
-    lcd.write((byte)0);
+    lcd.print(buf);
+    lcd.write((byte)0); // cookie icon
+    lcd.print("S"); // Только S после печенек
     prevState.cookies = cookies;
   }
   if (giftActive != prevState.giftActive || giftPos != prevState.giftPos) {
     if (giftActive) {
-      lcd.setCursor(giftPos, 0);
-      lcd.print("#");
+      lcdPrintAt(giftPos, 0, "#");
     } else if (prevState.giftActive) {
-      lcd.setCursor(prevState.giftPos, 0);
-      lcd.print(" ");
+      lcdPrintAt(prevState.giftPos, 0, " ");
     }
     prevState.giftActive = giftActive;
     prevState.giftPos = giftPos;
   }
-  lcd.setCursor(0, 1);
-  lcd.print(F("SHOP"));
-  lcd.print("a*");
+  lcdPrintAt(0, 1, F("SHOP"));
+  lcdPrintAt(4, 1, "a");
+  lcdPrintAt(5, 1, "*"); // Только здесь звездочка для престижа
   drawFarmButtons();
 }
 
@@ -379,15 +402,12 @@ void displayShopScreen() {
   int nextClick = getNextClickPower(cookiesPerClick);
   int level = getLevel(cookiesPerClick);
   if (cost != prevState.shopCost || nextClick != prevState.shopNextClick || level != prevState.shopLevel) {
-    lcd.setCursor(0, 0);
-    drawButton(0, 0, "^", cursorX == 0 && cursorY == 0 && currentScreen == SHOP);
-    lcd.setCursor(1, 0);
-    lcd.print("           ");
+    lcdPrintAt(0, 0, "^");
+    lcdPrintAt(1, 0, "           ");
     printRightAligned(cost, 1, 0, 4);
     drawRightAlignedLabel(nextClick, 0);
-    drawButton(0, 1, "<", cursorX == 0 && cursorY == 1 && currentScreen == SHOP);
-    lcd.setCursor(2, 1);
-    lcd.print(F("Your Level"));
+    lcdPrintAt(0, 1, "<");
+    lcdPrintAt(2, 1, F("Your Level"));
     drawRightAlignedLabel(level, 1);
     prevState.shopCost = cost;
     prevState.shopNextClick = nextClick;
@@ -396,17 +416,13 @@ void displayShopScreen() {
 }
 
 void displayPrestigeConfirmScreen() {
-    lcd.setCursor(0, 0);
-    lcd.print(F("ARE YOU SURE?"));
-    lcd.setCursor(0, 1);
-    lcd.print(F("NO    YES"));
+    lcdPrintAt(0, 0, F("ARE YOU SURE?"));
+    lcdPrintAt(0, 1, F("NO    YES"));
 }
 
 void displayMessageScreen() {
-    lcd.setCursor(0, 0);
-    lcd.print(messageLine1);
-    lcd.setCursor(0, 1);
-    lcd.print(messageLine2);
+    lcdPrintAt(0, 0, messageLine1);
+    lcdPrintAt(0, 1, messageLine2);
 }
 
 void showMessage(const char* line1, const char* line2, GameState nextScreen, unsigned long timeout) {
@@ -428,39 +444,21 @@ void displayStarScreen() {
       getLevel(cookiesPerClick) != prevState.statsLevel ||
       totalUpgrades != prevState.totalUpgrades ||
       totalClicks != prevState.totalClicks) {
-    lcd.setCursor(0, 0);
-    lcd.print(F("T:"));
+    lcdPrintAt(0, 0, F("T:"));
     char buf[13];
     snprintf(buf, sizeof(buf), "%11ld", totalCookies);
     for (int i = 0; i < 11; i++) {
-      lcd.setCursor(2 + i, 0);
-      lcd.print(buf[i]);
+      lcdPrintAt(2 + i, 0, buf[i]);
     }
-    lcd.setCursor(15, 0);
-    if (cursorX == 15 && cursorY == 0 && currentScreen == STATS) {
-      lcd.write((byte)2);
-    } else {
-      lcd.print("S");
-    }
-    lcd.setCursor(0, 1);
-    if (cursorX == 0 && cursorY == 1 && currentScreen == STATS) {
-      lcd.write((byte)2);
-    } else {
-      lcd.print("<");
-    }
-    lcd.setCursor(1, 1);
-    lcd.print(F("L:"));
-    lcd.print(getLevel(cookiesPerClick));
-    lcd.print(F(" U:"));
-    lcd.print(totalUpgrades);
-    lcd.print(F(" C:"));
-    lcd.print(totalClicks);
-    lcd.setCursor(15, 1);
-    if (cursorX == 15 && cursorY == 1 && currentScreen == STATS) {
-      lcd.write((byte)2);
-    } else {
-      lcd.print("R");
-    }
+    lcdPrintAt(15, 0, "*");
+    lcdPrintAt(0, 1, "<");
+    lcdPrintAt(1, 1, F("L:"));
+    lcdPrintAt(3, 1, getLevel(cookiesPerClick));
+    lcdPrintAt(5, 1, F(" U:"));
+    lcdPrintAt(7, 1, totalUpgrades);
+    lcdPrintAt(9, 1, F(" C:"));
+    lcdPrintAt(11, 1, totalClicks);
+    lcdPrintAt(15, 1, "R");
     prevState.totalCookies = totalCookies;
     prevState.statsLevel = getLevel(cookiesPerClick);
     prevState.totalUpgrades = totalUpgrades;
@@ -470,10 +468,8 @@ void displayStarScreen() {
 
 void displayCongratsScreen() {
   lcd.clear();
-  lcd.setCursor(0, 0);
-  lcd.print(F("Congratulations"));
-  lcd.setCursor(0, 1);
-  lcd.print(GIFT_TEXTS[giftType]);
+  lcdPrintAt(0, 0, F("Congratulations"));
+  lcdPrintAt(0, 1, GIFT_TEXTS[giftType]);
   needRedraw = true;
 }
 
@@ -482,16 +478,24 @@ void handleJoystick() {
   if (now - lastJoystickMoveTime < JOYSTICK_DELAY) {
     return;
   }
-  if (digitalRead(JOY_RIGHT) && cursorX < 15) {
+  
+  // Read joystick state once
+  bool rightPressed = digitalRead(JOY_RIGHT) == HIGH;
+  bool leftPressed = digitalRead(JOY_LEFT) == HIGH;
+  bool upPressed = digitalRead(JOY_UP) == HIGH;
+  bool downPressed = digitalRead(JOY_DOWN) == HIGH;
+  
+  // Only move if exactly one direction is pressed
+  if (rightPressed && !leftPressed && !upPressed && !downPressed && cursorX < 15) {
     cursorX++;
     lastJoystickMoveTime = now;
-  } else if (digitalRead(JOY_LEFT) && cursorX > 0) {
+  } else if (leftPressed && !rightPressed && !upPressed && !downPressed && cursorX > 0) {
     cursorX--;
     lastJoystickMoveTime = now;
-  } else if (digitalRead(JOY_UP) == HIGH && cursorY > 0) {
+  } else if (upPressed && !rightPressed && !leftPressed && !downPressed && cursorY > 0) {
     cursorY--;
     lastJoystickMoveTime = now;
-  } else if (digitalRead(JOY_DOWN) == HIGH && cursorY < 1) {
+  } else if (downPressed && !rightPressed && !leftPressed && !upPressed && cursorY < 1) {
     cursorY++;
     lastJoystickMoveTime = now;
   }
@@ -505,7 +509,7 @@ void handleButtonPress() {
 
   // This block handles HELD presses, specifically for autocrafting on the main screen.
   // It has its own timer and returns immediately, separate from the single-press logic below.
-  if (currentScreen == MAIN && !congratsActive && pressed && cursorX >= BUTTON_FARM_X_START) {
+  if (currentScreen == MAIN && !congratsActive && pressed && cursorX >= BUTTON_FARM_X_START && cursorY == 1) {
     if (now - lastAutoCraftTime > DEBOUNCE_DELAY) {
       int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
       cookies += clickValue;
@@ -533,6 +537,7 @@ void handleButtonPress() {
         if (giftActive && cursorY == 0 && cursorX == giftPos) {
           activateGift();
           needRedraw = true;
+          lastState = pressed;
           return;
         }
         // SHOP button
@@ -548,7 +553,7 @@ void handleButtonPress() {
           needRedraw = true;
         }
         // '*' button (prestige)
-        else if (cursorY == 1 && cursorX == BUTTON_PRESTIGE_X) {
+        else if (cursorY == 1 && cursorX == 5) {
             if (cookies >= 1000000) {
                 currentScreen = PRESTIGE_CONFIRM;
                 cursorX = 0;
@@ -558,8 +563,8 @@ void handleButtonPress() {
             }
             needRedraw = true;
         }
-        // Star button (stats screen)
-        else if (cursorY == 0 && cursorX == getDigitCount(cookies)) {
+        // Звездочка-статистика после количества печенек
+        else if (cursorY == 0 && cursorX == getDigitCount(cookies) + 1) {
           currentScreen = STATS;
           cursorX = 0;
           cursorY = 1;
@@ -656,10 +661,19 @@ void handleButtonPress() {
 }
 
 void displayCursor() {
-  if (!cursorVisible) return;
-  // Logic is now universal for all screens
-  lcd.setCursor(cursorX, cursorY);
-  lcd.write((byte)2);
+  // Redraw previous cursor position
+  if (prevCursorX != cursorX || prevCursorY != cursorY) {
+    redrawElementAt(prevCursorX, prevCursorY);
+  }
+  // Don't show cursor if it's not visible (blinking)
+  if (!cursorVisible) {
+    prevCursorX = cursorX;
+    prevCursorY = cursorY;
+    return;
+  }
+  lcdWriteAt(cursorX, cursorY, (byte)2);
+  prevCursorX = cursorX;
+  prevCursorY = cursorY;
 }
 
 long long calculateUpgradeCost() {
@@ -683,7 +697,7 @@ long long calculateUpgradeCost() {
   return cost;
 }
 
-// Оптимизированная getDigitCount
+// Optimized getDigitCount
 int getDigitCount(long number) {
   int count = 1;
   while (number >= 10 && count < MAX_DIGITS) {
@@ -703,20 +717,22 @@ int getNextClickPower(int clickPower) {
   return (clickPower == 1) ? 2 : (clickPower + 2);
 }
 
-// Универсальная функция вывода числа справа
+// Universal function to print a number right-aligned
 void printRightAligned(int value, int row, int col, int width) {
   char buf[8];
   snprintf(buf, sizeof(buf), "%*d", width, value);
   for (int i = 0; i < width; i++) {
-    lcd.setCursor(col + i, row);
-    lcd.print(buf[i]);
+    lcdPrintAt(col + i, row, buf[i]);
   }
 }
 
-// Универсальная функция для кнопки
-void drawButton(int x, int y, const char* label, bool highlight) {
-  lcd.setCursor(x, y);
-  highlight ? lcd.write((byte)2) : lcd.print(label);
+// Universal function for a button
+inline void drawButton(int x, int y, const char* label, bool highlight) {
+  if (highlight) {
+    lcdWriteAt(x, y, 2);
+  } else {
+    lcdPrintAt(x, y, label);
+  }
 }
 
 // Helper: Draw a right-aligned label in 4 cells
@@ -724,8 +740,7 @@ void drawRightAlignedLabel(int value, int row) {
   char buf[5];
   snprintf(buf, sizeof(buf), "%4d", value);
   for (int i = 0; i < 4; i++) {
-    lcd.setCursor(12 + i, row);
-    lcd.print(buf[i]);
+    lcdPrintAt(12 + i, row, buf[i]);
   }
 }
 
@@ -807,20 +822,16 @@ void displayAScreen() {
   int income = getAutoClickPower(autoClickLevel < 0 ? 1 : autoClickLevel + 1);
   int level = autoClickLevel < 0 ? 0 : autoClickLevel;
   if (cost != prevState.autoCost || income != prevState.autoIncome || level != prevState.autoLevel) {
-    lcd.setCursor(0, 0);
-    drawButton(0, 0, "^", cursorX == 0 && cursorY == 0 && currentScreen == AUTOCLICK_SHOP);
+    lcdPrintAt(0, 0, "^");
     printRightAligned(cost, 1, 0, 4);
     char incbuf[4];
     snprintf(incbuf, sizeof(incbuf), "%3d", income);
-    lcd.setCursor(13, 0);
-    lcd.print(incbuf);
-    drawButton(0, 1, "<", cursorX == 0 && cursorY == 1 && currentScreen == AUTOCLICK_SHOP);
-    lcd.setCursor(2, 1);
-    lcd.print(F("Your Level"));
+    lcdPrintAt(13, 0, incbuf);
+    lcdPrintAt(0, 1, "<");
+    lcdPrintAt(2, 1, F("Your Level"));
     char lvlbuf[4];
     snprintf(lvlbuf, sizeof(lvlbuf), "%3d", level);
-    lcd.setCursor(13, 1);
-    lcd.print(lvlbuf);
+    lcdPrintAt(13, 1, lvlbuf);
     prevState.autoCost = cost;
     prevState.autoIncome = income;
     prevState.autoLevel = level;
@@ -879,32 +890,154 @@ void printBigNumber(long long number, int x, int y) {
     }
   }
   
-  lcd.setCursor(x, y);
-  lcd.print(&buf[i + 1]);
+  lcdPrintAt(x, y, &buf[i + 1]);
 } 
 
-// Универсальная функция для отрисовки фермерских кнопок
+// Universal function for drawing farm buttons
 void drawFarmButtons() {
   for (int i = 12; i < 16; i++) {
     for (int j = 0; j < 2; j++) {
-      lcd.setCursor(i, j);
-      lcd.print("J");
+      lcdPrintAt(i, j, "J");
     }
   }
 } 
 
-// Универсальная функция для очистки области экрана
-void clearArea(int x, int y, int width) {
-  lcd.setCursor(x, y);
-  for (int i = 0; i < width; i++) lcd.print(" ");
+// Universal function for clearing a screen area
+inline void clearArea(int x, int y, int width) {
+  lcdPrintAt(x, y, "        "); // Clear a 16-character area
 }
 
-// Универсальная функция для проверки положения курсора на кнопке
+// Universal function for checking if the cursor is on a button
 inline bool isCursorOnButton(int x, int y) {
   return cursorX == x && cursorY == y;
 }
 
-// Сброс состояния экрана
+// Reset screen state
 void resetPrevScreenVars() {
   memset(&prevState, -1, sizeof(prevState));
+} 
+
+// Redraw the element at the given position depending on the current screen
+void redrawElementAt(int x, int y) {
+  switch (currentScreen) {
+    case MAIN:
+      if (y == 0) {
+        // Top row: cookies or gift
+        if (giftActive && x == giftPos) {
+          lcdPrintAt(x, y, "#");
+        } else if (x >= 0 && x < getDigitCount(cookies)) {
+          // Redraw cookie digit
+          char buf[8];
+          snprintf(buf, sizeof(buf), "%ld", cookies);
+          int len = strlen(buf);
+          if (x < len) {
+            char c[2] = {buf[x], '\0'};
+            lcdPrintAt(x, y, c);
+          } else {
+            lcdPrintAt(x, y, " ");
+          }
+        } else if (x == getDigitCount(cookies)) {
+          lcdWriteAt(x, y, (byte)0); // cookie icon
+        } else if (x == getDigitCount(cookies) + 1) {
+          lcdPrintAt(x, y, "S"); // Только S после печенек
+        } else {
+          lcdPrintAt(x, y, " ");
+        }
+      } else if (y == 1) {
+        // Bottom row: buttons
+        if (x >= BUTTON_SHOP_X_START && x <= BUTTON_SHOP_X_END) {
+          const char* shopText = "SHOP";
+          lcdPrintAt(x, y, shopText + (x - BUTTON_SHOP_X_START));
+        } else if (x == BUTTON_AUTOCLICK_X) {
+          lcdPrintAt(x, y, "a");
+        } else if (x == 5) {
+          lcdPrintAt(x, y, "*"); // Только здесь звездочка для престижа
+        } else if (x >= BUTTON_FARM_X_START && x <= BUTTON_FARM_X_END) {
+          lcdPrintAt(x, y, "J");
+        } else {
+          lcdPrintAt(x, y, " ");
+        }
+      }
+      break;
+    case SHOP:
+      if (y == 0 && x == 0) drawButton(0, 0, "^", false);
+      else if (y == 1 && x == 0) drawButton(0, 1, "<", false);
+      else if (y == 0 && x > 0 && x < 16) lcdPrintAt(x, 0, " ");
+      else if (y == 1 && x > 0 && x < 16) lcdPrintAt(x, 1, " ");
+      break;
+    case AUTOCLICK_SHOP:
+      if (y == 0 && x == 0) drawButton(0, 0, "^", false);
+      else if (y == 1 && x == 0) drawButton(0, 1, "<", false);
+      else if (y == 0 && x > 0 && x < 16) lcdPrintAt(x, 0, " ");
+      else if (y == 1 && x > 0 && x < 16) lcdPrintAt(x, 1, " ");
+      break;
+    case STATS:
+      if (y == 0) {
+        if (x == 0) lcdPrintAt(0, 0, "T");
+        else if (x == 1) lcdPrintAt(1, 0, ":");
+        else if (x >= 2 && x < 13) {
+          // Redraw total cookies digits
+          char buf[13];
+          snprintf(buf, sizeof(buf), "%11ld", totalCookies);
+          lcdPrintAt(x, 0, buf[x-2]);
+        }
+        else if (x == 15) lcdPrintAt(15, 0, "*");
+        else lcdPrintAt(x, 0, " ");
+      } else if (y == 1) {
+        if (x == 0) lcdPrintAt(0, 1, "<");
+        else if (x == 1) lcdPrintAt(1, 1, "L");
+        else if (x == 2) lcdPrintAt(2, 1, ":");
+        else if (x == 3) lcdPrintAt(3, 1, getLevel(cookiesPerClick));
+        else if (x == 5) lcdPrintAt(5, 1, "U");
+        else if (x == 6) lcdPrintAt(6, 1, ":");
+        else if (x == 7) lcdPrintAt(7, 1, totalUpgrades);
+        else if (x == 9) lcdPrintAt(9, 1, "C");
+        else if (x == 10) lcdPrintAt(10, 1, ":");
+        else if (x == 11) lcdPrintAt(11, 1, totalClicks);
+        else if (x == 15) lcdPrintAt(15, 1, "R");
+        else lcdPrintAt(x, 1, " ");
+      }
+      break;
+    case PRESTIGE_CONFIRM:
+      if (y == 0) {
+        const char* sureText = "ARE YOU SURE?";
+        if (x < strlen(sureText)) {
+          char c[2] = {sureText[x], '\0'};
+          lcdPrintAt(x, 0, c);
+        } else {
+          lcdPrintAt(x, 0, " ");
+        }
+      } else if (y == 1) {
+        if (x >= BUTTON_PRESTIGE_NO_X_START && x <= BUTTON_PRESTIGE_NO_X_END) {
+          const char* noText = "NO";
+          lcdPrintAt(x, 1, noText + (x - BUTTON_PRESTIGE_NO_X_START));
+        } else if (x >= BUTTON_PRESTIGE_YES_X_START && x <= BUTTON_PRESTIGE_YES_X_END) {
+          const char* yesText = "YES";
+          lcdPrintAt(x, 1, yesText + (x - BUTTON_PRESTIGE_YES_X_START));
+        } else {
+          lcdPrintAt(x, 1, " ");
+        }
+      }
+      break;
+    case MESSAGE_SCREEN:
+      if (y == 0) {
+        if (x < strlen(messageLine1) && messageLine1[x] != '\0') {
+          char c[2] = {messageLine1[x], '\0'};
+          lcdPrintAt(x, 0, c);
+        } else {
+          lcdPrintAt(x, 0, " ");
+        }
+      } else if (y == 1) {
+        if (x < strlen(messageLine2) && messageLine2[x] != '\0') {
+          char c[2] = {messageLine2[x], '\0'};
+          lcdPrintAt(x, 1, c);
+        } else {
+          lcdPrintAt(x, 1, " ");
+        }
+      }
+      break;
+    default:
+      lcdPrintAt(x, y, " ");
+      break;
+  }
 } 
