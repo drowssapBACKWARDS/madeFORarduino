@@ -72,7 +72,6 @@ void displayMainScreen() {
     // Print cookies
     lcd.setCursor(cookiePos, 0);
     lcd.print(buf);
-    lcd.write((byte)0); // cookie icon
     lcd.print("S"); // Только S после печенек
     prevState.cookies = cookies;
   }
@@ -216,8 +215,6 @@ void redrawElementAt(int x, int y) {
             lcdPrintAt(x, y, " ");
           }
         } else if (x == getDigitCount(cookies)) {
-          lcdWriteAt(x, y, (uint8_t)0); // cookie icon
-        } else if (x == getDigitCount(cookies) + 1) {
           lcdPrintAt(x, y, "S"); // Только S после печенек
         } else if (x >= BUTTON_FARM_X_START && x <= BUTTON_FARM_X_END) {
           lcdPrintAt(x, y, "J"); // Farm buttons on top row
