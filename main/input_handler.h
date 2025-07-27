@@ -85,7 +85,7 @@ void handleButtonPress() {
           needRedraw = true;
         }
         // '*' button (prestige)
-        else if (cursorY == 1 && cursorX == 5) {
+        else if (cursorY == 1 && cursorX == BUTTON_PRESTIGE_X) {
             if (cookies >= 1000000) {
                 currentScreen = PRESTIGE_CONFIRM;
                 cursorX = 0;
@@ -95,8 +95,8 @@ void handleButtonPress() {
             }
             needRedraw = true;
         }
-        // Кнопка S - статистика после количества печенек
-        else if (cursorY == 0 && cursorX == getDigitCount(cookies) + 1) {
+        // Кнопка S - статистика (после количества печенек)
+        else if (cursorY == 0 && cursorX == getDigitCount(cookies)) {
           currentScreen = STATS;
           cursorX = 0;
           cursorY = 1;
@@ -126,7 +126,7 @@ void handleButtonPress() {
         break;
 
       case MESSAGE_SCREEN:
-        // Any press will return to the previous screen
+        // Any press will return to the previous screen immediately
         currentScreen = screenAfterMessage;
         messageTimeout = 0;
         needRedraw = true;

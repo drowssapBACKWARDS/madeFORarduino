@@ -56,6 +56,7 @@ void displayManager() {
         break;
     }
   }
+  // Always update cursor for blinking effect
   displayCursor();
 }
 
@@ -86,7 +87,7 @@ void displayMainScreen() {
   }
   lcdPrintAt(0, 1, F("SHOP"));
   lcdPrintAt(4, 1, "a");
-  lcdPrintAt(5, 1, "*"); // Звездочка для престижа
+  lcdPrintAt(BUTTON_PRESTIGE_X, 1, "*"); // Звездочка для престижа
   drawFarmButtons();
 }
 
@@ -175,17 +176,19 @@ void displayAScreen() {
 }
 
 void displayCursor() {
-  // Redraw previous cursor position
+  // Always redraw previous cursor position when cursor moves
   if (prevCursorX != cursorX || prevCursorY != cursorY) {
     redrawElementAt(prevCursorX, prevCursorY);
   }
-  // Don't show cursor if it's not visible (blinking)
-  if (!cursorVisible) {
-    prevCursorX = cursorX;
-    prevCursorY = cursorY;
-    return;
+  
+  // Always show cursor (blinking effect)
+  if (cursorVisible) {
+    lcdWriteAt(cursorX, cursorY, (uint8_t)2);
+  } else {
+    // Redraw the element under cursor when it's not visible
+    redrawElementAt(cursorX, cursorY);
   }
-  lcdWriteAt(cursorX, cursorY, (uint8_t)2);
+  
   prevCursorX = cursorX;
   prevCursorY = cursorY;
 }
@@ -228,7 +231,7 @@ void redrawElementAt(int x, int y) {
           lcdPrintAt(x, y, shopText + (x - BUTTON_SHOP_X_START));
         } else if (x == BUTTON_AUTOCLICK_X) {
           lcdPrintAt(x, y, "a");
-        } else if (x == 5) {
+        } else if (x == BUTTON_PRESTIGE_X) {
           lcdPrintAt(x, y, "*"); // Звездочка для престижа
         } else if (x >= BUTTON_FARM_X_START && x <= BUTTON_FARM_X_END) {
           lcdPrintAt(x, y, "J"); // Farm buttons on bottom row

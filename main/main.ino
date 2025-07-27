@@ -91,19 +91,19 @@ void loop() {
   handleJoystick();
   handleButtonPress();
   
-  // Only clear LCD and redraw everything if screen changed
+  // Clear LCD and redraw everything if screen changed
   if (currentScreen != lastScreen) {
     lcd.clear();
     lastScreen = currentScreen;
     needRedraw = true;
     resetPrevScreenVars();
   }
-  if (needRedraw) {
-    displayManager();
-    needRedraw = false;
-  }
+  
+  // Always redraw to ensure constant updates
+  displayManager();
+  needRedraw = false;
 
-  // Cursor blinking
+  // Cursor blinking - always update
   if (millis() - lastBlinkTime > BLINK_INTERVAL) {
     cursorVisible = !cursorVisible;
     lastBlinkTime = millis();
