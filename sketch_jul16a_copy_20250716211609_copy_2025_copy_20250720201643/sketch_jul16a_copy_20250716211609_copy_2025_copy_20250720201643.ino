@@ -82,14 +82,14 @@ GameState lastScreen = MAIN;
 
 // Non-blocking Timers
 unsigned long lastButtonPressTime = 0;
-const unsigned long DEBOUNCE_DELAY = 400;
+const unsigned long DEBOUNCE_DELAY = 600;
 unsigned long lastJoystickMoveTime = 0;
 const unsigned long JOYSTICK_DELAY = 200;
 
 // Cursor Blinking
 unsigned long lastBlinkTime = 0;
 bool cursorVisible = true;
-const unsigned long BLINK_INTERVAL = 950;
+const unsigned long BLINK_INTERVAL = 450;
 
 // Message Screen Variables
 char messageLine1[17] = "";
@@ -393,7 +393,7 @@ void displayMainScreen() {
   }
   lcdPrintAt(0, 1, F("SHOP"));
   lcdPrintAt(4, 1, "a");
-  lcdPrintAt(5, 1, "*"); // Только здесь звездочка для престижа
+  lcdPrintAt(5, 1, "*"); // Звездочка для престижа
   drawFarmButtons();
 }
 
@@ -417,7 +417,8 @@ void displayShopScreen() {
 
 void displayPrestigeConfirmScreen() {
     lcdPrintAt(0, 0, F("ARE YOU SURE?"));
-    lcdPrintAt(0, 1, F("NO    YES"));
+    lcdPrintAt(0, 1, F("NO"));
+    lcdPrintAt(6, 1, F("YES"));
 }
 
 void displayMessageScreen() {
@@ -450,7 +451,7 @@ void displayStarScreen() {
     for (int i = 0; i < 11; i++) {
       lcdPrintAt(2 + i, 0, buf[i]);
     }
-    lcdPrintAt(15, 0, "*");
+    lcdPrintAt(15, 0, "S");
     lcdPrintAt(0, 1, "<");
     lcdPrintAt(1, 1, F("L:"));
     lcdPrintAt(3, 1, getLevel(cookiesPerClick));
@@ -506,10 +507,10 @@ void handleButtonPress() {
   static unsigned long lastAutoCraftTime = 0;
   bool pressed = digitalRead(JOY_CENTER);
   unsigned long now = millis();
-
-  // This block handles HELD presses, specifically for autocrafting on the main screen.
-  // It has its own timer and returns immediately, separate from the single-press logic below.
-  if (currentScreen == MAIN && !congratsActive && pressed && cursorX >= BUTTON_FARM_X_START && cursorY == 1) {
+  
+    // This block handles HELD presses, specifically for autocrafting на главном экране.
+  // Теперь работает и для верхней, и для нижней строки с J.
+  if (currentScreen == MAIN && !congratsActive && pressed && cursorX >= BUTTON_FARM_X_START && cursorX <= BUTTON_FARM_X_END && (cursorY == 0 || cursorY == 1)) {
     if (now - lastAutoCraftTime > DEBOUNCE_DELAY) {
       int clickValue = bonus573Active ? (cookiesPerClick + 573) : cookiesPerClick;
       cookies += clickValue;
@@ -518,7 +519,6 @@ void handleButtonPress() {
       lastAutoCraftTime = now;
       needRedraw = true;
     }
-    lastState = pressed;
     return;
   }
   
@@ -563,7 +563,7 @@ void handleButtonPress() {
             }
             needRedraw = true;
         }
-        // Звездочка-статистика после количества печенек
+        // Кнопка S - статистика после количества печенек
         else if (cursorY == 0 && cursorX == getDigitCount(cookies) + 1) {
           currentScreen = STATS;
           cursorX = 0;
@@ -643,20 +643,20 @@ void handleButtonPress() {
           currentScreen = MAIN;
           needRedraw = true;
         }
-        // Save button S
-        else if (cursorY == 0 && cursorX == BUTTON_SAVE_X) {
-          manualSave();
-          needRedraw = true;
-        }
+        // Save button S (moved to top right)
+        // This is now handled above
         // Reset button R
         else if (cursorY == 1 && cursorX == BUTTON_RESET_X) {
           manualReset();
           needRedraw = true;
         }
+        // Save button S (top right)
+        else if (cursorY == 0 && cursorX == 15) {
+          manualSave();
+          needRedraw = true;
+        }
         break;
     }
-    
-    lastState = pressed;
   }
 }
 
@@ -922,7 +922,7 @@ void redrawElementAt(int x, int y) {
   switch (currentScreen) {
     case MAIN:
       if (y == 0) {
-        // Top row: cookies or gift
+        // Top row: cookies, gift, or farm buttons
         if (giftActive && x == giftPos) {
           lcdPrintAt(x, y, "#");
         } else if (x >= 0 && x < getDigitCount(cookies)) {
@@ -940,6 +940,8 @@ void redrawElementAt(int x, int y) {
           lcdWriteAt(x, y, (byte)0); // cookie icon
         } else if (x == getDigitCount(cookies) + 1) {
           lcdPrintAt(x, y, "S"); // Только S после печенек
+        } else if (x >= BUTTON_FARM_X_START && x <= BUTTON_FARM_X_END) {
+          lcdPrintAt(x, y, "J"); // Farm buttons on top row
         } else {
           lcdPrintAt(x, y, " ");
         }
@@ -951,9 +953,9 @@ void redrawElementAt(int x, int y) {
         } else if (x == BUTTON_AUTOCLICK_X) {
           lcdPrintAt(x, y, "a");
         } else if (x == 5) {
-          lcdPrintAt(x, y, "*"); // Только здесь звездочка для престижа
+          lcdPrintAt(x, y, "*"); // Звездочка для престижа
         } else if (x >= BUTTON_FARM_X_START && x <= BUTTON_FARM_X_END) {
-          lcdPrintAt(x, y, "J");
+          lcdPrintAt(x, y, "J"); // Farm buttons on bottom row
         } else {
           lcdPrintAt(x, y, " ");
         }
@@ -981,7 +983,7 @@ void redrawElementAt(int x, int y) {
           snprintf(buf, sizeof(buf), "%11ld", totalCookies);
           lcdPrintAt(x, 0, buf[x-2]);
         }
-        else if (x == 15) lcdPrintAt(15, 0, "*");
+        else if (x == 15) lcdPrintAt(15, 0, "S");
         else lcdPrintAt(x, 0, " ");
       } else if (y == 1) {
         if (x == 0) lcdPrintAt(0, 1, "<");
