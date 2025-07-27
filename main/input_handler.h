@@ -58,6 +58,15 @@ void handleButtonPress() {
   if (pressed && !lastState && now - lastButtonPressTime > DEBOUNCE_DELAY) {
     lastButtonPressTime = now;
     
+    // Handle message screen - any press closes it (before congrats check)
+    if (currentScreen == MESSAGE_SCREEN) {
+        currentScreen = screenAfterMessage;
+        messageTimeout = 0;
+        needRedraw = true;
+        lastState = pressed;
+        return;
+    }
+    
     if (congratsActive) {
         lastState = pressed;
         return;
@@ -125,12 +134,7 @@ void handleButtonPress() {
         }
         break;
 
-      case MESSAGE_SCREEN:
-        // Any press will return to the previous screen immediately
-        currentScreen = screenAfterMessage;
-        messageTimeout = 0;
-        needRedraw = true;
-        break;
+
 
       case AUTOCLICK_SHOP:
         // Exit button is now on the second line

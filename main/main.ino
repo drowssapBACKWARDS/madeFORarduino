@@ -97,16 +97,22 @@ void loop() {
     lastScreen = currentScreen;
     needRedraw = true;
     resetPrevScreenVars();
+    // Reset cursor position for new screen
+    prevCursorX = -1;
+    prevCursorY = -1;
   }
   
-  // Always redraw to ensure constant updates
-  displayManager();
-  needRedraw = false;
-
   // Cursor blinking - always update
   if (millis() - lastBlinkTime > BLINK_INTERVAL) {
     cursorVisible = !cursorVisible;
     lastBlinkTime = millis();
     needRedraw = true;
   }
+  
+  // Always redraw to ensure constant updates
+  displayManager();
+  
+  // Always update cursor for blinking effect - ensure it's visible on symbols
+  displayCursor();
+  needRedraw = false;
 } 

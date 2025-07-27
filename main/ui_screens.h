@@ -28,6 +28,12 @@ void showMessage(const char* line1, const char* line2, GameState nextScreen, uns
     if (timeout > 0) {
         messageDisplayStart = millis();
     }
+    // Reset cursor position for message screen and ensure it's visible
+    cursorX = 0;
+    cursorY = 0;
+    prevCursorX = -1;
+    prevCursorY = -1;
+    cursorVisible = true; // Ensure cursor is visible
     needRedraw = true;
 }
 
@@ -56,7 +62,7 @@ void displayManager() {
         break;
     }
   }
-  // Always update cursor for blinking effect
+  // Always update cursor for blinking effect - ensure it's visible on all screens
   displayCursor();
 }
 
@@ -116,6 +122,7 @@ void displayPrestigeConfirmScreen() {
 }
 
 void displayMessageScreen() {
+    // Always redraw message screen to ensure cursor visibility
     lcdPrintAt(0, 0, messageLine1);
     lcdPrintAt(0, 1, messageLine2);
 }
@@ -181,7 +188,7 @@ void displayCursor() {
     redrawElementAt(prevCursorX, prevCursorY);
   }
   
-  // Always show cursor (blinking effect)
+  // Show cursor with blinking effect on all screens
   if (cursorVisible) {
     lcdWriteAt(cursorX, cursorY, (uint8_t)2);
   } else {
@@ -302,18 +309,22 @@ void redrawElementAt(int x, int y) {
       break;
     case MESSAGE_SCREEN:
       if (y == 0) {
-        if (x < strlen(messageLine1) && messageLine1[x] != '\0') {
-          char c[2] = {messageLine1[x], '\0'};
-          lcdPrintAt(x, 0, c);
-        } else {
-          lcdPrintAt(x, 0, " ");
+        if (x >= 0 && x < 16) {
+          if (x < strlen(messageLine1) && messageLine1[x] != '\0') {
+            char c[2] = {messageLine1[x], '\0'};
+            lcdPrintAt(x, 0, c);
+          } else {
+            lcdPrintAt(x, 0, " ");
+          }
         }
       } else if (y == 1) {
-        if (x < strlen(messageLine2) && messageLine2[x] != '\0') {
-          char c[2] = {messageLine2[x], '\0'};
-          lcdPrintAt(x, 1, c);
-        } else {
-          lcdPrintAt(x, 1, " ");
+        if (x >= 0 && x < 16) {
+          if (x < strlen(messageLine2) && messageLine2[x] != '\0') {
+            char c[2] = {messageLine2[x], '\0'};
+            lcdPrintAt(x, 1, c);
+          } else {
+            lcdPrintAt(x, 1, " ");
+          }
         }
       }
       break;
